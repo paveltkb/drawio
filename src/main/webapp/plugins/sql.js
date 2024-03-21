@@ -51,6 +51,7 @@ Draw.loadPlugin(function(ui) {
                 char1 = "[";
                 char2 = "]";
             }
+            if(label[0] === "\"" && label[label.length - 1] === "\"") return label
             return `${char1}${label}${char2}`;
         }
         /**
@@ -61,6 +62,12 @@ Draw.loadPlugin(function(ui) {
          * @returns
          */
         createTable(entityKey, entity) {
+            const keys = entityKey.split('=')
+            let inherits = ''
+            if(keys.length === 2) {
+                entityKey = keys[0]
+                inherits = keys[1]
+            }
             let statement = `CREATE TABLE ${this.dbTypeEnds(entityKey)} (`;
             let primaryKeys = [];
             let attributesAdded = 0;
@@ -142,7 +149,7 @@ Draw.loadPlugin(function(ui) {
             if (attributesAdded != 0) {
                 statement += "\n";
             }
-            statement += `);\n\n`;
+            statement += `)${inherits?` INHERITS (${inherits})`:''};\n\n`;
             return statement;
         }
     }
