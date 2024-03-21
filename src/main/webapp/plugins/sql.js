@@ -69,11 +69,15 @@ Draw.loadPlugin(function(ui) {
                 inherits = keys[1]
             }
             let statement = `CREATE TABLE ${this.dbTypeEnds(entityKey)} (`;
+            if(entityKey.startsWith("enum")) {
+                entityKey = entityKey.split(' ').splice(1).join('_')
+                statement = `CREATE TYPE ${this.dbTypeEnds(entityKey)} AS ENUM (`;
+            }
             let primaryKeys = [];
             let attributesAdded = 0;
             for (let i = 0; i < entity.attributes.length; i++) {
                 const attribute = entity.attributes[i];
-                if (attribute.attributeType && attribute.attributeName) {
+                if (attribute.attributeType) {
                     statement += attributesAdded == 0 ? "\n" : ",\n";
                     attributesAdded++;
                     // need to add parenthesis or commas
@@ -106,7 +110,8 @@ Draw.loadPlugin(function(ui) {
                             attribute.attributeKeyType == "PK") {
                             primaryKeys.push(attribute.attributeName);
                         }
-                        statement += `\t${this.dbTypeEnds(attribute.attributeName)} ${columnType}`;
+                        if(attribute.attributeName)statement += `\t${this.dbTypeEnds(attribute.attributeName.trim())} ${columnType}`;
+                        else statement += `\t${columnType}`;
                     }
                 }
             }
@@ -254,6 +259,11 @@ Draw.loadPlugin(function(ui) {
                         for (let c = 0; c < mxcell.children.length; c++) {
                             const col = mxcell.children[c];
                             if(col.mxObjectId.indexOf("mxCell") !== -1) {
+                                if(col.style && col.style.trim().startsWith("text;")){
+                                    const columnQuantifiers = GetColumnQuantifiers(type);
+                                    let attribute = getDbLabel(col.value, columnQuantifiers)
+                                    entity.attributes.push(attribute)
+                                }
                                 if(col.style && col.style.trim().startsWith("shape=partialRectangle")){
                                     const columnQuantifiers = GetColumnQuantifiers(type);
                                     //Get delimiter of column name
