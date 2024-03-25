@@ -85,7 +85,7 @@ Draw.loadPlugin(function(ui) {
                     // BIGGEST difference from original is that column types don't have to be fixed
                     let columnType = attribute.attributeType.trim();
                     const starIndex = columnType.indexOf("*")
-                    if(starIndex !==-1 && attribute.attributeKeyType === "FK") {
+                    if(starIndex !==-1) {
                         const fTable = columnType.slice(starIndex+1)
                         columnType = columnType.slice(0, starIndex-1)
                         foreignKeys.push({fTable, key: attribute.attributeName});
