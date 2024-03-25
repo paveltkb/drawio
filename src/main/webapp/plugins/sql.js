@@ -74,6 +74,7 @@ Draw.loadPlugin(function(ui) {
                 statement = `CREATE TYPE ${this.dbTypeEnds(entityKey)} AS ENUM (`;
             }
             let primaryKeys = [];
+            let foreignKeys = [];
             let attributesAdded = 0;
             for (let i = 0; i < entity.attributes.length; i++) {
                 const attribute = entity.attributes[i];
@@ -83,6 +84,13 @@ Draw.loadPlugin(function(ui) {
                     // need to add parenthesis or commas
                     // BIGGEST difference from original is that column types don't have to be fixed
                     let columnType = attribute.attributeType.trim();
+                    const starIndex = columnType.indexOf("*")
+                    if(starIndex !==-1 && attribute.attributeKeyType === "FK") {
+                        const fTable = columnType.slice(starIndex+1)
+                        columnType = columnType.slice(0, starIndex-1)
+                        foreignKeys.push({fTable, key: attribute.attributeName});
+                    }
+
                     if (attribute.attributeComment) {
                         let attributeName = attribute.attributeName;
                         let attributeComment = attribute.attributeComment.trim();
@@ -123,8 +131,14 @@ Draw.loadPlugin(function(ui) {
                 }
                 statement += ")";
             }
+            if (foreignKeys.length > 0) {
+                for (let i = 0; i < foreignKeys.length; i++) {
+                    const element = foreignKeys[i];
+                    statement += `,\n\tFOREIGN KEY (${this.dbTypeEnds(element.key)}) REFERENCES "${element.fTable}"("id")`;
+                }
+            }
             // foreign keys
-            let entityFKeys = this.relationships.filter((relation) => relation.entityB == entityKey);
+            let entityFKeys = this.relationships.filter((relation) => relation.entityB.split('=')[0] == entityKey);
             if (entityFKeys.length > 0) {
                 for (let i = 0; i < entityFKeys.length; i++) {
                     const fk = entityFKeys[i];
@@ -147,7 +161,8 @@ Draw.loadPlugin(function(ui) {
                         }
                         pkCol = pkCol.trim();
                         // FOREIGN KEY (`Artist Id`) REFERENCES `Artist`(`ArtistId`)
-                        statement += `,\n\tFOREIGN KEY (${this.dbTypeEnds(fkCol)}) REFERENCES ${this.dbTypeEnds(fk.entityA)}(${this.dbTypeEnds(pkCol)})`;
+                        const entityA = fk.entityA.split('=')[0]
+                        statement += `,\n\tFOREIGN KEY (${this.dbTypeEnds(fkCol)}) REFERENCES ${this.dbTypeEnds(entityA)}(${this.dbTypeEnds(pkCol)})`;
                     }
                 }
             }
