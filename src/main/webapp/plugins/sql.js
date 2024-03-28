@@ -77,6 +77,7 @@ Draw.loadPlugin(function(ui) {
                 inherits = keys[1]
             }
             let statement = `CREATE TABLE ${this.dbTypeEnds(entityKey)} (`;
+            if(inherits) statement += `\n\tLIKE ${inherits} INCLUDING ALL,`
             if(entityKey.startsWith("enum")) {
                 entityKey = entityKey.split(' ').splice(1).join('_')
                 statement = `CREATE TYPE ${entityKey.replace(/["]/g, '')} AS ENUM (`;
@@ -177,7 +178,7 @@ Draw.loadPlugin(function(ui) {
             if (attributesAdded != 0) {
                 statement += "\n";
             }
-            statement += `)${inherits?` INHERITS (${inherits})`:''};\n\n`;
+            statement += `);${inherits?`\n\nALTER TABLE ${entityKey} INHERIT ${inherits};`:''}\n\n`;
             return statement;
         }
     }
@@ -475,7 +476,7 @@ Draw.loadPlugin(function(ui) {
         var parser = new DbParser(type, db)
         // generate sql
         var sql = parser.getSQLDataDefinition()
-        sql = `BEGIN;\n\n` + sql + 'COMMIT;'
+        sql = `BEGIN;\n\n` + sql + 'ROLLBACK;'
         sql = sql.trim();
         // update sql value in text area
         sqlInputGenSQL.value = sql;
