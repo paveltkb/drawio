@@ -25,15 +25,23 @@ Draw.loadPlugin(function(ui) {
         }
         lexer() {
             let statementGeneration = [];
+            let preScripts = []
             if (this.entities) {
-                for (const key in this.entities) {
+                const order = this.entities["ORDER"]?.attributes.reduce((acc, cur, i)=>({...acc, [cur.attributeType.replace(/["]/g, '')]: i}), {}) || {}
+                preScripts = this.entities["PRE_SCRIPTS"]?.attributes.map(a=>a.attributeType.replace(/["]/g, '')) || []
+                delete this.entities["PRE_SCRIPTS"]
+                delete this.entities["ORDER"]
+                const keys = Object.keys(this.entities)
+                keys.sort((a,b)=>(order[a] - order[b]))
+                keys.forEach((key)=> {
                     if (Object.prototype.hasOwnProperty.call(this.entities, key)) {
                         const entity = this.entities[key];
                         statementGeneration.push(this.createTable(key, entity));
                     }
-                }
+                })
             }
-            return statementGeneration.join("");
+            const preScriptsString = preScripts.join("\n") + "\n\n"
+            return (preScripts.length > 0 ? preScriptsString: "" )+ statementGeneration.join("");
         }
         /**
          * convert labels with start and end strings per database type
@@ -71,7 +79,7 @@ Draw.loadPlugin(function(ui) {
             let statement = `CREATE TABLE ${this.dbTypeEnds(entityKey)} (`;
             if(entityKey.startsWith("enum")) {
                 entityKey = entityKey.split(' ').splice(1).join('_')
-                statement = `CREATE TYPE ${this.dbTypeEnds(entityKey)} AS ENUM (`;
+                statement = `CREATE TYPE ${entityKey.replace(/["]/g, '')} AS ENUM (`;
             }
             let primaryKeys = [];
             let foreignKeys = [];
@@ -467,7 +475,7 @@ Draw.loadPlugin(function(ui) {
         var parser = new DbParser(type, db)
         // generate sql
         var sql = parser.getSQLDataDefinition()
-        sql = `/*\n\tGenerated in drawio\n\tDatabase: ${type}\n*/\n\n` + sql
+        sql = `BEGIN;\n\n` + sql + 'COMMIT;'
         sql = sql.trim();
         // update sql value in text area
         sqlInputGenSQL.value = sql;
