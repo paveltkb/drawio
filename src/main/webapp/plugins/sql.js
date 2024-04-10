@@ -32,11 +32,12 @@ Draw.loadPlugin(function(ui) {
                 delete this.entities["PRE_SCRIPTS"]
                 delete this.entities["ORDER"]
                 const keys = Object.keys(this.entities)
-                keys.sort((a,b)=>(order[a] - order[b]))
+                keys.sort((a,b)=>((order[a] ?? 99999999999) - (order[b] ?? 99999999999999)))
                 keys.forEach((key)=> {
                     if (Object.prototype.hasOwnProperty.call(this.entities, key)) {
                         const entity = this.entities[key];
                         statementGeneration.push(this.createTable(key, entity));
+                    } else {
                     }
                 })
             }
