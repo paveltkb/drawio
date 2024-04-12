@@ -26,10 +26,13 @@ Draw.loadPlugin(function(ui) {
         lexer() {
             let statementGeneration = [];
             let preScripts = []
+            let postScripts = []
             if (this.entities) {
                 const order = this.entities["ORDER"]?.attributes.reduce((acc, cur, i)=>({...acc, [cur.attributeType.replace(/["]/g, '')]: i}), {}) || {}
-                preScripts = this.entities["PRE_SCRIPTS"]?.attributes.map(a=>a.attributeType.replace(/["]/g, '')) || []
+                preScripts = this.entities["PRE_SCRIPTS"]?.attributes.map(a=>a.attributeType.replace(/^\"+|\"+$/g, '')) || []
+                postScripts = this.entities["POST_SCRIPTS"]?.attributes.map(a=>a.attributeType.replace(/^\"+|\"+$/g, '')) || []
                 delete this.entities["PRE_SCRIPTS"]
+                delete this.entities["POST_SCRIPTS"]
                 delete this.entities["ORDER"]
                 const keys = Object.keys(this.entities)
                 keys.sort((a,b)=>((order[a] ?? 99999999999) - (order[b] ?? 99999999999999)))
@@ -42,7 +45,8 @@ Draw.loadPlugin(function(ui) {
                 })
             }
             const preScriptsString = preScripts.join("\n") + "\n\n"
-            return (preScripts.length > 0 ? preScriptsString: "" )+ statementGeneration.join("");
+            const postScriptsString = postScripts.join("\n") + "\n\n"
+            return (preScripts.length > 0 ? preScriptsString: "" )+ statementGeneration.join("") +  (postScripts.length > 0 ? postScriptsString: "" );
         }
         /**
          * convert labels with start and end strings per database type
