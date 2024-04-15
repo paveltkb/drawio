@@ -82,7 +82,11 @@ Draw.loadPlugin(function(ui) {
                 inherits = keys[1]
             }
             let statement = `CREATE TABLE ${this.dbTypeEnds(entityKey)} (`;
-            if(inherits) statement += `\n\tLIKE ${inherits} INCLUDING ALL,`
+            // if(inherits) statement += `\n\tLIKE ${inherits} INCLUDING ALL,`
+            if(inherits) {
+                statement = `SELECT create_table_like('${inherits}', '${entityKey}');\n`
+                statement += `ALTER TABLE ${entityKey}`
+            }
             if(entityKey.startsWith("enum")) {
                 entityKey = entityKey.split(' ').splice(1).join('_')
                 statement = `CREATE TYPE ${entityKey.replace(/["]/g, '')} AS ENUM (`;
@@ -105,40 +109,40 @@ Draw.loadPlugin(function(ui) {
                         foreignKeys.push({fTable, key: attribute.attributeName});
                     }
 
-                    if (attribute.attributeComment) {
-                        let attributeName = attribute.attributeName;
-                        let attributeComment = attribute.attributeComment.trim();
-                        if (attribute.attributeComment.indexOf("'") != -1) {
-                            // extract
-                            const testFullNameMatches = attribute.attributeComment.match(/(?<=((?<=[\s,.:;"']|^)["']))(?:(?=(\\?))\2.)*?(?=\1)/gmu);
-                            if (testFullNameMatches && testFullNameMatches.length > 0) {
-                                attributeName = testFullNameMatches[0];
-                                attributeComment = attributeComment
-                                    .replace(`'${attributeName}'`, "")
-                                    .trim();
-                            }
-                        }
-                        if (attributeComment)
-                            attributeComment = " " + attributeComment;
-                        // check if contains full column name
-                        statement += `\t${this.dbTypeEnds(attributeName)} ${columnType}${attributeComment}`;
+                    // if (attribute.attributeComment) {
+                    //     let attributeName = attribute.attributeName;
+                    //     let attributeComment = attribute.attributeComment.trim();
+                    //     if (attribute.attributeComment.indexOf("'") != -1) {
+                    //         // extract
+                    //         const testFullNameMatches = attribute.attributeComment.match(/(?<=((?<=[\s,.:;"']|^)["']))(?:(?=(\\?))\2.)*?(?=\1)/gmu);
+                    //         if (testFullNameMatches && testFullNameMatches.length > 0) {
+                    //             attributeName = testFullNameMatches[0];
+                    //             attributeComment = attributeComment
+                    //                 .replace(`'${attributeName}'`, "")
+                    //                 .trim();
+                    //         }
+                    //     }
+                    //     if (attributeComment)
+                    //         attributeComment = " " + attributeComment;
+                    //     // check if contains full column name
+                    //     statement += `\t${this.dbTypeEnds(attributeName)} ${columnType}${attributeComment}`;
+                    //     if (attribute.attributeKeyType &&
+                    //         attribute.attributeKeyType == "PK") {
+                    //         primaryKeys.push(attribute.attributeName);
+                    //     }
+                    // }
+                    // else {
                         if (attribute.attributeKeyType &&
                             attribute.attributeKeyType == "PK") {
                             primaryKeys.push(attribute.attributeName);
                         }
-                    }
-                    else {
-                        if (attribute.attributeKeyType &&
-                            attribute.attributeKeyType == "PK") {
-                            primaryKeys.push(attribute.attributeName);
-                        }
-                        if(attribute.attributeName)statement += `\t${this.dbTypeEnds(attribute.attributeName.trim())} ${columnType}`;
+                        if(attribute.attributeName)statement += `\t${inherits?'ADD ':''}${this.dbTypeEnds(attribute.attributeName.trim())} ${columnType}`;
                         else statement += `\t${columnType}`;
-                    }
+                    // }
                 }
             }
             if (primaryKeys.length > 0) {
-                statement += ",\n\tPRIMARY KEY(";
+                statement += `,\n\t${inherits?'ADD ':''}PRIMARY KEY(`;
                 for (let i = 0; i < primaryKeys.length; i++) {
                     const element = primaryKeys[i];
                     statement += (i == 0 ? "" : ",") + this.dbTypeEnds(primaryKeys[i]);
@@ -148,7 +152,7 @@ Draw.loadPlugin(function(ui) {
             if (foreignKeys.length > 0) {
                 for (let i = 0; i < foreignKeys.length; i++) {
                     const element = foreignKeys[i];
-                    statement += `,\n\tFOREIGN KEY (${this.dbTypeEnds(element.key)}) REFERENCES "${element.fTable}"("id")`;
+                    statement += `,\n\t${inherits?'ADD ':''}FOREIGN KEY (${this.dbTypeEnds(element.key)}) REFERENCES "${element.fTable}"("id")`;
                 }
             }
             // foreign keys
@@ -176,14 +180,14 @@ Draw.loadPlugin(function(ui) {
                         pkCol = pkCol.trim();
                         // FOREIGN KEY (`Artist Id`) REFERENCES `Artist`(`ArtistId`)
                         const entityA = fk.entityA.split('=')[0]
-                        statement += `,\n\tFOREIGN KEY (${this.dbTypeEnds(fkCol)}) REFERENCES ${this.dbTypeEnds(entityA)}(${this.dbTypeEnds(pkCol)})`;
+                        statement += `,\n\t${inherits?'ADD ':''}FOREIGN KEY (${this.dbTypeEnds(fkCol)}) REFERENCES ${this.dbTypeEnds(entityA)}(${this.dbTypeEnds(pkCol)})`;
                     }
                 }
             }
             if (attributesAdded != 0) {
                 statement += "\n";
             }
-            statement += `);${inherits?`\n\nALTER TABLE ${entityKey} INHERIT ${inherits};`:''}\n\n`;
+            statement += `${inherits?';':');'}${inherits?`\nALTER TABLE ${entityKey} INHERIT ${inherits};`:''}\n\n`;
             return statement;
         }
     }
